@@ -16,25 +16,25 @@ class App
     if @books.empty?
       puts 'There are no books, you can add some'
     else
-      @books.each do |book, i|
-        puts "#{by_number ? "#{i}) " : ''}
-	   Title: \"#{book.title}\", Author: \"#{book.author}\""
+      @books.each_with_index do |book, i|
+        puts "#{by_number ? "#{i}) " : ''} Title: \"#{book.title}\", Author: \"#{book.author}\""
       end
     end
-    list_options
+
+    list_options unless by_number
   end
 
   # list added people
-  def list_people(by_number: true)
+  def list_people(by_number: false)
     if @people.empty?
       puts 'There is no record of a person, you can add a person'
     else
-      @people.each do |person, i|
-        puts "#{by_number ? "#{i}) " : ''}[#{person.class.name}]
-		 Name: #{person.name}, ID: #{person.id}, Age: #{person.age}"
+      @people.each_with_index do |person, i|
+        number_index = (by_number ? "#{i}) " : '').to_s
+        puts "#{number_index}[#{person.class.name}] Name: #{person.name}, ID: #{person.id}, Age: #{person.age}"
       end
     end
-    list_options
+    list_options unless by_number
   end
 
   # create a person
@@ -42,16 +42,16 @@ class App
     print 'Do you want to create a student (1) or a teacher(2) [Input the number]:'
     person_type = gets.chomp
     print 'Age:'
-    age gets.chomp
+    age = gets.chomp
     print 'Name:'
-    name gets.chomp
-    print person_type == 2 ? 'Specialization' : 'Has parent permission? [Y/N]:'
+    name = gets.chomp
+    print person_type == '2' ? 'Specialization: ' : 'Has parent permission? [Y/N]:'
     parent_permission = gets.chomp
-    person
-    person = if person_type == 2
+    classroom = ClassRoom.new('class-1')
+    person = if person_type == '2'
                Teacher.new(parent_permission, age, name)
              else
-               Student.new(Classroom.new, age, name, parent_permission.upcase == 'Y')
+               Student.new(classroom, age, name, parent_permission: parent_permission.upcase == 'Y')
              end
     @people << person
     puts 'Person created successfully'
@@ -75,12 +75,12 @@ class App
     puts 'Select a book from the following list by number'
     list_books(by_number: true)
     book_index = gets.chomp
-    book = @books[book_index]
-    pusts 'Select a person from the following list by number (not id)'
+    book = @books[book_index.to_i]
+    puts 'Select a person from the following list by number (not id)'
     list_people(by_number: true)
     person_i = gets.chomp
-    person = @persons[person_i]
-    print 'Date'
+    person = @people[person_i.to_i]
+    print 'Date:'
     date = gets.chomp
     rental = Rental.new(date, book, person)
     @rentals << rental
@@ -93,57 +93,59 @@ class App
   def person_rentals
     print 'ID of person:'
     person_id = gets.chomp
-    rented = @rentals.select { |rental| rental.person.id == person_id }
+    rented = @rentals.select { |rental| rental.person.id == person_id.to_i }
     if rented.empty?
       puts "No rentals found for id: #{person_id}"
     else
       puts 'Rentals:'
       rented.each { |rental| puts "Date: #{rental.date} Book: \"#{rental.book.title}\" by #{rental.book.author}" }
     end
+    list_options
   end
 
   # list options
   def list_options
     options = ['List all books', 'List all people',
                'Create a person', 'Create a book', 'Create a rental',
-               'List all rentals for a given person id', 'Exit']
+               'List all rentals for a given person id', 'Exit(Any key apart from 1..6 will prompt an exit)']
     puts 'Please choose an option by entering a number'
-    options.each { |option, i| puts "#{i + 1} - #{option}" }
+    options.each_with_index { |option, i| puts "#{i + 1} - #{option}" }
     option = gets.chomp
-    if option.is_a? Numeric
-      if option.between(0, 8)
-        check_option(option)
-      else
-        invalid_option
-      end
+    option.to_i
+    check_option(option)
+  end
+
+  # called to ask a user when 7 is keyed or any other key
+  def exit_console
+    print 'Are you sure you want to exit? You may have pressed an invalid option [Y/N]: '
+    option = gets.chomp
+    if option.upcase == 'Y'
+      puts 'BYE! BYE!'
+      exit
     else
-      invalid_option
+      puts 'He who increases knowledge increases sorrow'
+      list_options
     end
   end
 
   # read options
   def check_option(option)
     case option
-    when 1
+    when '1'
       list_books
-    when 2
+    when '2'
       list_people
-    when 3
+    when '3'
       create_person
-    when 4
+    when '4'
       create_book
-    when 5
+    when '5'
       create_rental
-    when 6
+    when '6'
       person_rentals
     else
-      exit
+      exit_console
     end
-  end
-
-  def invalid_option(func = list_options)
-    puts 'The selected option is invalid'
-    method(func).call
   end
 
   def start
